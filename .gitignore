@@ -1,0 +1,6 @@
+cleanup.bat
+pubfile.bat
+
+*~
+*.swp
+
