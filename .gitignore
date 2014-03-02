@@ -1,6 +1,4 @@
-cleanup.bat
-pubfile.bat
-
 *~
 *.swp
 
+localTests/*
