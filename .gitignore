@@ -1,4 +1,7 @@
 *~
 *.swp
 
+pub.bat
+pub_exclude.bat
+
 localTests/*
