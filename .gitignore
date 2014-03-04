@@ -2,6 +2,6 @@
 *.swp
 
 pub.bat
-pub_exclude.bat
+pub_exclude.txt
 
 localTests/*
