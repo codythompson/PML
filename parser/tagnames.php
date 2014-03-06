@@ -20,4 +20,6 @@ define("SPAN_HTML_TAG_NAME", "span");
 
 //COMMON ATTRIBUTES
 define("XMLNS_ATTRIBUTE", "xmlns");
+define("CSS_ID", "id");
+define("CSS_CLASS", "class");
 ?>

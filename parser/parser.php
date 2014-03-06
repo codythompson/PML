@@ -15,6 +15,8 @@ define("EXPECTING_ONLY_META_AND_HTML_PARSER_MESSAGE",
     "Expecting only pml:meta and html tags at top level, found '%d' elements.");
 define("ELEMENT_MISSING_ATTRIBUTE_PARSER_MESSAGE",
     "'%s' element is missing '%s' attribute.");
+define("UNEXPECTED_NON_DOMELEMENT_PARSER_MESSAGE",
+    "Expected DOMElement but received '%s'");
 
 class PageParser {
     private $managedDocument;
@@ -40,7 +42,12 @@ class PageParser {
         //
         $this->parseMetaSection($metaElement);
 
-        //TODO REMOVE ME - TEST CODE
+        $parsedHead = $this->parseElement($htmlHead);
+        $parsedBody = $this->parseElement($htmlBody);
+
+        $this->managedDocument->headElements = $parsedHead->childElements;
+        $this->managedDocument->bodyElements = $parsedBody->childElements;
+
         $this->managedDocument->writeDocument();
     }
 
@@ -104,6 +111,68 @@ class PageParser {
 //        $docFilePath = $this->getAttributeValue($managedDocumentElement,
 //            PML_MANAGED_DOCUMENT_FILE_PATH_ATTRIBUTE);
         $this->managedDocument = new $docClassName();
+    }
+
+    private function parseElement($domElement) {
+        if (!($domElement instanceof DOMElement)) {
+            $this->throwInvalidError(UNEXPECTED_NON_DOMELEMENT_PARSER_MESSAGE,
+                $domElement->__toString());
+        }
+
+        $parsedElement = new HtmlElement($domElement->tagName);
+        $this->parseAttributes($domElement->attributes, $parsedElement);
+
+        $childNodes = $domElement->childNodes;
+        $this->parseChildren($childNodes, $parsedElement);
+
+        return $parsedElement;
+    }
+
+    private function parseAttributes($domNamedNodeMap, $parsedElement) {
+        foreach($domNamedNodeMap as $attribute) {
+            if ($attribute->name === CSS_ID) {
+                $parsedElement->cssId = $attribute->value;
+            } else if ($attribute->name === CSS_CLASS) {
+                $parsedElement->cssClass = $attribute->value;
+            } else {
+                $parsedElement->setAttribute($attribute->name, $attribute->value);
+            }
+        }
+    }
+
+    private function parseChildren($childNodes, $parsedElement) {
+        $parsedChildren = array();
+        foreach($childNodes as $domElement) {
+            if ($domElement instanceof DOMElement) {
+                $parsedChildren[] = $this->parseElement($domElement);
+            } else if ($domElement instanceof DOMText) {
+                //TODO better solution than simply placing text into spans
+                // if there is more than one child text node.
+                if ($this->hasMoreThanOneDOMTextChild($childNodes)) {
+                    $parsedChildren[] = new HtmlElement(SPAN_HTML_TAG_NAME, null,
+                        null, $domElement->wholeText);
+                } else {
+                    $parsedElement->text = $domElement->wholeText;
+                }
+            } else {
+                $this->throwInvalidError(UNEXPECTED_NON_DOMELEMENT_PARSER_MESSAGE,
+                    $domElement->__toString());
+            }
+        }
+        $parsedElement->childElements = $parsedChildren;
+    }
+
+    private function hasMoreThanOneDOMTextChild($childNodes) {
+        $foundOne = false;
+        foreach($childNodes as $child) {
+            if ($child instanceof DOMText) {
+                if ($foundOne) {
+                    return true;
+                } else {
+                    $foundOne = true;
+                }
+            }
+        }
     }
 
     private function getAttributeValue($element, $attributeName) {
