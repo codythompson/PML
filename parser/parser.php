@@ -15,11 +15,14 @@ define("EXPECTING_ONLY_META_AND_HTML_PARSER_MESSAGE",
     "Expecting only pml:meta and html tags at top level, found '%d' elements.");
 define("ELEMENT_MISSING_ATTRIBUTE_PARSER_MESSAGE",
     "'%s' element is missing '%s' attribute.");
-define("UNEXPECTED_NON_DOMELEMENT_PARSER_MESSAGE",
-    "Expected DOMElement but received '%s'");
+define("UNEXPECTED_TYPE_PARSER_MESSAGE",
+    "Expected '%s' but received '%s'");
+define("DUPLICATE_MANAGED_ID_PARSER_MESSAGE",
+    "The managed_element_id '%s' has already been used.");
 
 class PageParser {
     private $managedDocument;
+    private $managedElements;
 
     public function parseDocumentFile($filepath) {
         $domDocument = new DOMDocument();
@@ -39,7 +42,9 @@ class PageParser {
         $htmlHead = $htmlChildren->item(0);
         $htmlBody = $htmlChildren->item(1);
 
-        //
+        //DOM LOADING which I refer to as parsing not quite accurately
+        $this->managedElements = array();
+        
         $this->parseMetaSection($metaElement);
 
         $parsedHead = $this->parseElement($htmlHead);
@@ -48,6 +53,18 @@ class PageParser {
         $this->managedDocument->headElements = $parsedHead->childElements;
         $this->managedDocument->bodyElements = $parsedBody->childElements;
 
+        //NEED to account for difference of being able to change text and 
+        //attributes of normal html elements and the notion of user-control
+        // -like behavior
+        // lets change the name of ManagedElement class to Widget
+        /*
+        foreach($this->managedELements as $managedElement) {
+            $managedElement->onDOMLoad($this->managedDocument);
+        }
+         */
+        $this->managedDocument->onDOMLoad($this->managedElements);
+
+        //write the document
         $this->managedDocument->writeDocument();
     }
 
@@ -113,13 +130,16 @@ class PageParser {
         $this->managedDocument = new $docClassName();
     }
 
+    /*
+     * Recursively parse the XML into a tree of HtmlElement objects
+     */
     private function parseElement($domElement) {
         if (!($domElement instanceof DOMElement)) {
-            $this->throwInvalidError(UNEXPECTED_NON_DOMELEMENT_PARSER_MESSAGE,
-                $domElement->__toString());
+            $this->throwInvalidError(UNEXPECTED_TYPE_PARSER_MESSAGE,
+                get_class(DOMElement), get_class($domElement));
         }
 
-        $parsedElement = new HtmlElement($domElement->tagName);
+        $parsedElement = $this->parseElementType($domElement);
         $this->parseAttributes($domElement->attributes, $parsedElement);
 
         $childNodes = $domElement->childNodes;
@@ -128,14 +148,62 @@ class PageParser {
         return $parsedElement;
     }
 
+    private function parseElementType($domElement) {
+        $parsedElement = new HtmlElement($domElement->tagName);
+        if ($domElement->hasAttribute(PML_MANAGED_ID_ATTRIBUTE_NAME)) {
+            $managedElementId = $domElement->getAttribute(
+                PML_MANAGED_ID_ATTRIBUTE_NAME);
+            if (array_key_exists($managedElementId, $this->managedElements)) {
+                $this->throwInvalidError(DUPLICATE_MANAGED_ID_PARSER_MESSAGE,
+                    $managedElementId);
+            }
+
+        /*
+         * TODO re-implement the following as user controll-ee things
+         */
+            /*
+            $className = $this->getClassNameFromTagName($domElement->tagName);
+            $parsedElement = new $className;
+            if (!($parsedElement instanceof ManagedElement)) {
+                $this->throwInvalidError(UNEXPECTED_TYPE_PARSER_MESSAGE,
+                    get_class(ManagedElement), get_class($parsedElement));
+            }
+            $parsedElement->managedElementId = $managedElementId;
+            $this->managedElements[$managedElementId] = $parsedElement;
+            $domElement->removeAttribute(PML_IS_MANAGED_ATTRIBUTE_NAME);
+             */
+            $this->managedElements[$managedElementId] = $parsedElement;
+        }
+
+        return $parsedElement;
+    }
+
+    /*
+     * Returns the last substring of $tagName split by a colon ':'
+     *
+     * aka if element is <pml:someKindOfSomething></pml:someKindOfSomething>
+     * this would return 'someKindOfSomething'
+     *
+     * if you had <pml:youHaveMoreThan1Colon:ForSomeWeirdReason/>
+     * this would return 'ForSomeWeirdReason'
+     */
+    private function getClassNameFromTagName($tagName) {
+        $split = explode($tagName, XML_NAMESPACE_DELIMITER);
+        return $split[count($split) - 1];
+    }
+
     private function parseAttributes($domNamedNodeMap, $parsedElement) {
-        foreach($domNamedNodeMap as $attribute) {
-            if ($attribute->name === CSS_ID) {
-                $parsedElement->cssId = $attribute->value;
-            } else if ($attribute->name === CSS_CLASS) {
-                $parsedElement->cssClass = $attribute->value;
-            } else {
-                $parsedElement->setAttribute($attribute->name, $attribute->value);
+        if ($parsedElement instanceof ParseableAttributesElement) {
+            $parsedElement->parseAttributes($domNamedNodeMap);
+        } else {
+            foreach($domNamedNodeMap as $attribute) {
+                if ($attribute->name === CSS_ID) {
+                    $parsedElement->cssId = $attribute->value;
+                } else if ($attribute->name === CSS_CLASS) {
+                    $parsedElement->cssClass = $attribute->value;
+                } else {
+                    $parsedElement->setAttribute($attribute->name, $attribute->value);
+                }
             }
         }
     }
@@ -155,8 +223,8 @@ class PageParser {
                     $parsedElement->text = $domElement->wholeText;
                 }
             } else {
-                $this->throwInvalidError(UNEXPECTED_NON_DOMELEMENT_PARSER_MESSAGE,
-                    $domElement->__toString());
+                $this->throwInvalidError(UNEXPECTED_TYPE_PARSER_MESSAGE,
+                    get_class(DOMElement), $domElement->__toString());
             }
         }
         $parsedElement->childElements = $parsedChildren;
