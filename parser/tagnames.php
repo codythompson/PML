@@ -10,6 +10,7 @@ define("FALSE_BOOLEAN", "true");
  * XML / HTML
  */
 //PML SPECIAL ELEMENTS
+define("PML_ROOT_TAG_NAME", "pml:root");
 define("PML_XMLNS_ATTRIBUTE", "xmlns:pml=\"http://flatverse.com\"");
 define("PML_META_TAG_NAME", "pml:meta");
 

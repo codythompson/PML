@@ -1,8 +1,8 @@
 <?php
 //TODO dynamically load the class php files
 require_once("classfileloader.php");
-
 require_once("/lib/util/util.php");
+require_once("/lib/elements/HtmlElement.php");
 require_once("tagnames.php");
 /*
  * Constants used exclusively by this class

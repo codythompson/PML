@@ -5,3 +5,4 @@ pub.bat
 pub_exclude.txt
 
 localTests/*
+test/*
