@@ -32,6 +32,10 @@ class ElementParser {
 
     private function parseElementType($domElement) {
         $parsedElement = new HtmlElement($domElement->tagName);
+        $className = $this->getClassNameFromTagName($domElement->tagName);
+        if ($className !== null) {
+            $parsedElement = new $className();
+        }
         if ($domElement->hasAttribute(PML_MANAGED_ID_ATTRIBUTE_NAME)) {
             $managedElementId = $domElement->getAttribute(
                 PML_MANAGED_ID_ATTRIBUTE_NAME);
@@ -39,21 +43,6 @@ class ElementParser {
                 PageParser::throwInvalidError(DUPLICATE_MANAGED_ID_PARSER_MESSAGE,
                     $managedElementId);
             }
-
-        /*
-         * TODO re-implement the following as user controll-ee things
-         */
-            /*
-            $className = $this->getClassNameFromTagName($domElement->tagName);
-            $parsedElement = new $className;
-            if (!($parsedElement instanceof ManagedElement)) {
-                PageParser::throwInvalidError(UNEXPECTED_TYPE_PARSER_MESSAGE,
-                    get_class(ManagedElement), get_class($parsedElement));
-            }
-            $parsedElement->managedElementId = $managedElementId;
-            $this->managedElements[$managedElementId] = $parsedElement;
-            $domElement->removeAttribute(PML_IS_MANAGED_ATTRIBUTE_NAME);
-             */
             $this->managedElements[$managedElementId] = $parsedElement;
         }
 
@@ -70,14 +59,18 @@ class ElementParser {
      * this would return 'ForSomeWeirdReason'
      */
     private function getClassNameFromTagName($tagName) {
-        $split = explode($tagName, XML_NAMESPACE_DELIMITER);
+        $split = explode(XML_NAMESPACE_DELIMITER, $tagName);
+        if (count($split) < 2) {
+            return null;
+        }
         return $split[count($split) - 1];
     }
 
     private function parseAttributes($domNamedNodeMap, $parsedElement) {
-        if ($parsedElement instanceof ParseableAttributesElement) {
-            $parsedElement->parseAttributes($domNamedNodeMap);
-        } else {
+        if ($parsedElement instanceof AttributesParser) {
+            $domNamedNodeMap = $parsedElement->parseAttributes($domNamedNodeMap);
+        }
+        if ($domNamedNodeMap !== null) {
             foreach($domNamedNodeMap as $attribute) {
                 if ($attribute->name === CSS_ID) {
                     $parsedElement->cssId = $attribute->value;
@@ -91,25 +84,28 @@ class ElementParser {
     }
 
     private function parseChildren($childNodes, $parsedElement) {
-        $parsedChildren = array();
-        foreach($childNodes as $domElement) {
-            if ($domElement instanceof DOMElement) {
-                $parsedChildren[] = $this->parseElement($domElement);
-            } else if ($domElement instanceof DOMText) {
-                //TODO better solution than simply placing text into spans
-                // if there is more than one child text node.
-                if ($this->hasMoreThanOneDOMTextChild($childNodes)) {
-                    $parsedChildren[] = new HtmlElement(SPAN_HTML_TAG_NAME, null,
-                        null, $domElement->wholeText);
+        if ($parsedElement instanceof ChildrenParser) {
+            $childNodes = $parsedElement->parseChildren($childNodes);
+        }
+        if ($childNodes !== null) {
+            foreach($childNodes as $domElement) {
+                if ($domElement instanceof DOMElement) {
+                    $parsedElement->childElements[] = $this->parseElement($domElement);
+                } else if ($domElement instanceof DOMText) {
+                    //TODO better solution than simply placing text into spans
+                    // if there is more than one child text node.
+                    if ($this->hasMoreThanOneDOMTextChild($childNodes)) {
+                        $parsedElement->childElements[] = new HtmlElement(SPAN_HTML_TAG_NAME,
+                            null, null, $domElement->wholeText);
+                    } else {
+                        $parsedElement->text = $domElement->wholeText;
+                    }
                 } else {
-                    $parsedElement->text = $domElement->wholeText;
+                    PageParser::throwInvalidError(UNEXPECTED_TYPE_PARSER_MESSAGE,
+                        get_class(DOMElement), $domElement->__toString());
                 }
-            } else {
-                PageParser::throwInvalidError(UNEXPECTED_TYPE_PARSER_MESSAGE,
-                    get_class(DOMElement), $domElement->__toString());
             }
         }
-        $parsedElement->childElements = $parsedChildren;
     }
 
     private function hasMoreThanOneDOMTextChild($childNodes) {
@@ -123,6 +119,7 @@ class ElementParser {
                 }
             }
         }
+        return false;
     }
 
     public function getManagedElements() {

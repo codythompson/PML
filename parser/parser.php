@@ -56,16 +56,13 @@ class PageParser {
         $this->managedDocument->headElements = $parsedHead->childElements;
         $this->managedDocument->bodyElements = $parsedBody->childElements;
 
-        //NEED to account for difference of being able to change text and 
-        //attributes of normal html elements and the notion of user-control
-        // -like behavior
-        // lets change the name of ManagedElement class to Widget
-        /*
-        foreach($this->managedELements as $managedElement) {
-            $managedElement->onDOMLoad($this->managedDocument);
+        $managedElements = $this->elementParser->getManagedElements();
+        foreach($managedElements as $managedElement) {
+            if ($managedElement instanceof ManagedElement) {
+                $managedElement->onDOMLoad($this->managedDocument);
+            }
         }
-         */
-        $this->managedDocument->onDOMLoad($this->elementParser->getManagedElements());
+        $this->managedDocument->onDOMLoad($managedElements);
 
         //write the document
         $this->managedDocument->writeDocument();
