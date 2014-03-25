@@ -3,6 +3,7 @@
 require_once("classfileloader.php");
 require_once("/lib/util/util.php");
 require_once("/lib/elements/HtmlElement.php");
+require_once("/lib/elements/Widget.php");
 require_once("tagnames.php");
 require_once("elementParser.php");
 /*
@@ -20,14 +21,16 @@ define("UNEXPECTED_TYPE_PARSER_MESSAGE",
     "Expected '%s' but received '%s'");
 define("DUPLICATE_MANAGED_ID_PARSER_MESSAGE",
     "The managed_element_id '%s' has already been used.");
+//TODO move this to a settings file
+define("DEFAULT_ELEMENT_PARSER", "ElementParser");
 
 class PageParser {
     private $managedDocument;
-    //private $managedElements;
     private $elementParser;
 
     public function __construct() {
-        $this->elementParser = new ElementParser();
+        $elementParserClassName = DEFAULT_ELEMENT_PARSER;
+        $this->elementParser = new $elementParserClassName();
     }
 
     public function parseDocumentFile($filepath) {
@@ -50,8 +53,10 @@ class PageParser {
 
         $this->parseMetaSection($metaElement);
 
-        $parsedHead = $this->elementParser->parseElement($htmlHead);
-        $parsedBody = $this->elementParser->parseElement($htmlBody);
+        $parsedHead = $this->elementParser->parseElement($htmlHead,
+            $this->managedDocument);
+        $parsedBody = $this->elementParser->parseElement($htmlBody,
+            $this->managedDocument);
 
         $this->managedDocument->headElements = $parsedHead->childElements;
         $this->managedDocument->bodyElements = $parsedBody->childElements;
@@ -137,6 +142,14 @@ class PageParser {
             PageParser::throwInvalidError(ELEMENT_MISSING_ATTRIBUTE_PARSER_MESSAGE,
                 $element, $attributeName);
         }
+    }
+
+    /*
+     * TODO make this actually return different values based on class name
+     */
+    public static function getNewElementParser($elementClassName) {
+        $elementParserClassName = DEFAULT_ELEMENT_PARSER;
+        return new $elementParserClassName();
     }
 
     public static function throwInvalidError($message) {

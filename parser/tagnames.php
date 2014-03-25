@@ -12,11 +12,13 @@ define("FALSE_BOOLEAN", "true");
 //PML SPECIAL ELEMENTS
 define("PML_ROOT_TAG_NAME", "pml:root");
 define("PML_XMLNS_ATTRIBUTE", "xmlns:pml=\"http://flatverse.com\"");
+define("PML_ASSOCIATED_MARKUP_ROOT_TAG_NAME", "pml:widget_root");
 define("PML_META_TAG_NAME", "pml:meta");
 
 define("PML_MANAGED_DOCUMENT_TAG_NAME", "pml:managed_document");
 define("PML_MANAGED_DOCUMENT_CLASS_NAME_ATTRIBUTE", "class_name");
 define("PML_MANAGED_ID_ATTRIBUTE_NAME", "pml:managed_element_id");
+define("PML_ASSOCIATED_MARKUP_ATTRIBUTE_NAME", "pml:associated_markup");
 //define("PML_MANAGED_DOCUMENT_FILE_PATH_ATTRIBUTE", "file_path");
 
 //HTML REQUIRED ELEMENTS
