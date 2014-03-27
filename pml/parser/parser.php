@@ -1,29 +1,4 @@
 <?php
-//TODO dynamically load the class php files
-require_once("classfileloader.php");
-require_once("/lib/util/util.php");
-require_once("/lib/elements/HtmlElement.php");
-require_once("/lib/elements/Widget.php");
-require_once("tagnames.php");
-require_once("elementParser.php");
-/*
- * Constants used exclusively by this class
- */
-define("ELEMENT_NOT_FOUND_PARSER_MESSAGE",
-    "No '%s' element was found while parsing the document");
-define("EXPECTING_ONLY_HEAD_AND_BODY_PARSER_MESSAGE",
-    "Expecting only head and body elements in html tag, found '%d' elements.");
-define("EXPECTING_ONLY_META_AND_HTML_PARSER_MESSAGE",
-    "Expecting only pml:meta and html tags at top level, found '%d' elements.");
-define("ELEMENT_MISSING_ATTRIBUTE_PARSER_MESSAGE",
-    "'%s' element is missing '%s' attribute.");
-define("UNEXPECTED_TYPE_PARSER_MESSAGE",
-    "Expected '%s' but received '%s'");
-define("DUPLICATE_MANAGED_ID_PARSER_MESSAGE",
-    "The managed_element_id '%s' has already been used.");
-//TODO move this to a settings file
-define("DEFAULT_ELEMENT_PARSER", "ElementParser");
-
 class PageParser {
     private $managedDocument;
     private $elementParser;
@@ -78,12 +53,12 @@ class PageParser {
             $PageParser::throwInvalidError(EXPECTING_ONLY_META_AND_HTML_PARSER_MESSAGE,
                 $rootChildren->length);
         }
-        if (!equalsIgnoreCase($rootChildren->item(0)->tagName,
+        if (!Util::equalsIgnoreCase($rootChildren->item(0)->tagName,
                 PML_META_TAG_NAME)) {
             $PageParser::throwInvalidError(ELEMENT_NOT_FOUND_PARSER_MESSAGE,
                 PML_META_TAG_NAME);
         }
-        if (!equalsIgnoreCase($rootChildren->item(1)->tagName, HTML_TAG_NAME)) {
+        if (!Util::equalsIgnoreCase($rootChildren->item(1)->tagName, HTML_TAG_NAME)) {
             $PageParser::throwInvalidError(ELEMENT_NOT_FOUND_PARSER_MESSAGE,
                 HTML_TAG_NAME);
         }
@@ -91,17 +66,17 @@ class PageParser {
 
     private function validateHeadAndBody($htmlChildren) {
         if ($htmlChildren->length != 2) {
-            $PageParser::throwInvalidError(EXPECTING_ONLY_HEAD_AND_BODY_PARSER_MESSAGE,
+            PageParser::throwInvalidError(EXPECTING_ONLY_HEAD_AND_BODY_PARSER_MESSAGE,
                 $htmlChildren->length);
         }
-        if (!equalsIgnoreCase($htmlChildren->item(0)->tagName,
+        if (!Util::equalsIgnoreCase($htmlChildren->item(0)->tagName,
                 HEAD_HTML_TAG_NAME)) {
-            $PageParser::throwInvalidError(ELEMENT_NOT_FOUND_PARSER_MESSAGE,
+            PageParser::throwInvalidError(ELEMENT_NOT_FOUND_PARSER_MESSAGE,
                 HEAD_HTML_TAG_NAME);
         }
-        if (!equalsIgnoreCase($htmlChildren->item(1)->tagName,
+        if (!Util::equalsIgnoreCase($htmlChildren->item(1)->tagName,
                 BODY_HTML_TAG_NAME)) {
-            $PageParser::throwInvalidError(ELEMENT_NOT_FOUND_PARSER_MESSAGE,
+            PageParser::throwInvalidError(ELEMENT_NOT_FOUND_PARSER_MESSAGE,
                 BODY_HTML_TAG_NAME);
         }
     }
@@ -111,10 +86,20 @@ class PageParser {
 
         $managedDocumentElement = null;
         foreach($metaChildren as $element) {
-            if ($element instanceof DOMElement
-                    && equalsIgnoreCase($element->tagName,
-                    PML_MANAGED_DOCUMENT_TAG_NAME)) {
+            if (!($element instanceof DOMElement)) {
+                self::throwInvalidError(UNEXPECTED_TYPE_PARSER_MESSAGE,
+                    get_class(DOMElement), get_class($element));
+            }
+
+            $tagName = $element->tagName;
+            if (Util::equalsIgnoreCase($tagName, PML_MANAGED_DOCUMENT_TAG_NAME)) {
                 $managedDocumentElement = $element;
+            } else if (Util::equalsIgnoreCase($tagName,
+                    PML_REGISTER_CLASS_TAG_NAME)) {
+                $className = $element->getAttribute(
+                    PML_MANAGED_DOCUMENT_CLASS_NAME_ATTRIBUTE);
+                $path = $element->getAttribute(PML_FILE_PATH_ATTRIBUTE);
+                PMLLoader::registerClass($className, $path);
             }
         }
 
@@ -127,11 +112,12 @@ class PageParser {
     }
 
     private function createDocumentFromElement($managedDocumentElement) {
-        $docClassName = $this->getAttributeValue($managedDocumentElement,
+        $docClassName = $managedDocumentElement->getAttribute(
             PML_MANAGED_DOCUMENT_CLASS_NAME_ATTRIBUTE);
-//TODO dynamically load the class php files
-//        $docFilePath = $this->getAttributeValue($managedDocumentElement,
-//            PML_MANAGED_DOCUMENT_FILE_PATH_ATTRIBUTE);
+        if ($managedDocumentElement->hasAttribute(PML_FILE_PATH_ATTRIBUTE)) {
+            PMLLoader::registerClass($docClassName,
+                $managedDocumentElement->getAttribute(PML_FILE_PATH_ATTRIBUTE));
+        }
         $this->managedDocument = new $docClassName();
     }
 

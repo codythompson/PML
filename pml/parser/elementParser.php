@@ -1,5 +1,4 @@
 <?php
-require_once("parser.php");
 /*
  * This should maybe be changed to an interface and have the implementation
  * moved to a different class.
@@ -39,7 +38,7 @@ class ElementParser {
 
         $root = $domDocument->documentElement;
         if ($root === null
-                || !($root->tagName !== PML_ASSOCIATED_MARKUP_ROOT_TAG_NAME)) {
+                || $root->tagName !== PML_ASSOCIATED_MARKUP_ROOT_TAG_NAME) {
             PageParser::throwInvalidError(ELEMENT_NOT_FOUND_PARSER_MESSAGE,
                 PML_ASSOCIATED_MARKUP_ROOT_TAG_NAME);
         }
