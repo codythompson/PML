@@ -87,6 +87,7 @@ class ElementParser {
                 PageParser::throwInvalidError(DUPLICATE_MANAGED_ID_PARSER_MESSAGE,
                     $managedElementId);
             }
+            $domElement->removeAttribute(PML_MANAGED_ID_ATTRIBUTE_NAME);
             $this->managedElements[$managedElementId] = $parsedElement;
         }
 
