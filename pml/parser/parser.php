@@ -111,9 +111,13 @@ class PageParser {
         }
     }
 
+    /*
+     * TODO throw error if class_name and file_path not present
+     */
     private function createDocumentFromElement($managedDocumentElement) {
         $docClassName = $managedDocumentElement->getAttribute(
             PML_MANAGED_DOCUMENT_CLASS_NAME_ATTRIBUTE);
+        
         if ($managedDocumentElement->hasAttribute(PML_FILE_PATH_ATTRIBUTE)) {
             PMLLoader::registerClass($docClassName,
                 $managedDocumentElement->getAttribute(PML_FILE_PATH_ATTRIBUTE));

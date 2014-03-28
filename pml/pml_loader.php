@@ -27,6 +27,8 @@ class PMLLoader {
             "Widget" => "$elementsFolderPath/widget.php",
             "ElementParser" => "$parserFolderPath/elementParser.php",
             "PageParser" => "$parserFolderPath/parser.php",
+            "AttributesParser" => "$elementsFolderPath/parseableElement.php",
+            "ChildrenParser" => "$elementsFolderPath/parseableElement.php",
             "Util" => "$utilFolderPath/util.php");
     }
 
