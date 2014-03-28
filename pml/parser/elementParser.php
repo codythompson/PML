@@ -44,6 +44,9 @@ class ElementParser {
         }
 
         $rootChildren = $root->childNodes;
+        //TODO some bounds checking
+        $this->parseMetaSection($rootChildren->item(0));
+        $rootChildren = $rootChildren->item(1)->childNodes;
 
         $elementParser = PageParser::getNewElementParser(get_class($widget));
         foreach($rootChildren as $rootChild) {
@@ -61,6 +64,23 @@ class ElementParser {
             }
         }
         $widget->onMarkupLoad($elementParser->managedElements, $parentDocument);
+    }
+
+    private function parseMetaSection($metaElement) {
+        if ($metaElement->tagName !== PML_META_TAG_NAME) {
+            PageParser::throwInvalidError(ELEMENT_NOT_FOUND_PARSER_MESSAGE,
+                PML_META_TAG_NAME);
+        }
+
+        $metaChildren = $metaElement->childNodes;
+        foreach($metaChildren as $child) {
+            if ($child->tagName == PML_REGISTER_CLASS_TAG_NAME) {
+                $className = $child->getAttribute(PML_MANAGED_DOCUMENT_CLASS_NAME_ATTRIBUTE);
+                $path = $child->getAttribute(PML_ASSOCIATED_MARKUP_ROOT_TAG_NAME);
+                PMLLoader::registerClass($className, $path);
+            }
+        }
+
     }
 
     private function parseElementType($domElement, $parentDocument) {
